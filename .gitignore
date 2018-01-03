@@ -1,0 +1,30 @@
+static/_headmaster/main/_config.json
+release.properties
+# excluding gitignore in sub folders
+*/.gitignore
+
+**/sftp-config.json
+sftp-config.json
+# eclipse setting files
+/.settings
+*/.settings
+/.bpmn
+*/.bpmn
+.project
+.classpath
+maven-eclipse.xml
+.springBeans
+.pydevproject
+
+# maven target folder
+/target
+*/target
+
+**/rebel.xml
+
+# idea
+/.idea
+*/.idea
+*.iml
+.DS_Store
+*local.php
