@@ -1,5 +1,5 @@
 <?php
-class Vendor_Router_AppRouter implements Yaf_Route_Interface{
+class Router_AppRouter implements Yaf_Route_Interface{
     private $_applicationDirectory;
     private $_defaultController;
     private $_defaultAction;

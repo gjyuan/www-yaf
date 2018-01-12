@@ -1,8 +1,8 @@
 <?php
-class TestController extends Yaf_Controller_Abstract {
+class TestController extends Web_Controller_TplBase {
 
     public function helloAction() {
-        echo "hello world";
+        $this->display("hello",['name'=>"gaojiyaun"]);
     }
 
 }

@@ -1,6 +1,11 @@
 <?php
-class ErrorController extends Yaf_Controller_Abstract {
+class ErrorController extends Web_Controller_Base {
     public function errorAction($exception) {
-        var_dump($exception->getMessage());
+        if($this->isApi()){
+            $msg = $exception->getMessage();
+            $this->error($msg);
+        }else{
+            $this->show();
+        }
     }
 }

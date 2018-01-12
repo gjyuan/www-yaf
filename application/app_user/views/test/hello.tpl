@@ -5,6 +5,6 @@
     <title>Title</title>
 </head>
 <body>
-HELLO world test view!
+HELLO <?php echo $name;?> test view!
 </body>
 </html>

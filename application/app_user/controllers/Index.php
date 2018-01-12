@@ -1,8 +1,8 @@
 <?php
-class IndexController extends Yaf_Controller_Abstract {
+class IndexController extends Web_Controller_ApiBase {
 
     public function indexAction() {
-        echo "hello world";
+        $this->success("hello world");
     }
 
 }
