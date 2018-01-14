@@ -1,5 +1,6 @@
 <?php
-class Utils_Conf {
+
+class Config {
     private $applicationPath;
     private $appConfPath;
     private $_config;
@@ -17,8 +18,7 @@ class Utils_Conf {
             throw new ConfigException("Make sure you have defined " . $constName . " value");
         }
     }
-
-    public static function app(){
+    private static function app(){
         if(empty(self::$_configApp)){
             self::$_configApp = new self();
         }
@@ -33,31 +33,32 @@ class Utils_Conf {
         return self::app()->appConfPath;
     }
 
-    public static function get($key,$name){
-        self::app()->getConf();
+    public static function get($key="",$name=""){
+        $conf = self::app()->getConf($key);
+        if(!empty($name)){
+        }
+        return $conf;
     }
     private function getConf($key=""){
-        $app = self::app();
         $key = !empty($key) ? $key : "application";//默认获取application的配置
-        if(!empty($app->_config[$key])){
-            return $app->_config[$key];
+        if(!empty($this->_config[$key])){
+            return $this->_config[$key];
         }
-        $confFiles = $app->getConfFiles($key);
+        $confFiles = $this->getConfFiles($key);
         $config = [];
         foreach($confFiles as $f){
-            if(!isset($app->fileMap[$f])){
+            if(!isset($this->fileMap[$f])){
                 $confIni = new Yaf_Config_Ini($f);
-                $app->fileMap[$f] = $confIni->get(APP_MODE)->toArray();
+                $this->fileMap[$f] = $confIni->get(APP_MODE)->toArray();
             }
-            $config[] = $app->fileMap[$f];
+            $config[] = $this->fileMap[$f];
         }
-        $app->_config[$key] = $app->merge(...$config);
-        return $app->_config[$key];
+        $this->_config[$key] = $this->merge(...$config);
+        return $this->_config[$key];
     }
 
     private function getConfFiles($key){
-        $app = self::app();
-        return array_filter([$app->getCommonConfigFile($key),$app->getAppConfigFile($key)]);
+        return array_filter([$this->getCommonConfigFile($key),$this->getAppConfigFile($key)]);
     }
 
     private function getCommonConfigFile($key){
@@ -67,6 +68,7 @@ class Utils_Conf {
         }
         return "";
     }
+
     private function getAppConfigFile($key){
         if(empty($key)) return "";
         $file = self::getAppConfPath() . DIRECTORY_SEPARATOR . $key . ".ini";
