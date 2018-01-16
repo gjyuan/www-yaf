@@ -9,7 +9,7 @@ class Config {
     public function __construct(){
         if(defined("ROOT_PATH") && defined("APP_NAME")) {
             defined("APPLICATION_PATH") || define("APPLICATION_PATH", ROOT_PATH . DIRECTORY_SEPARATOR . 'application' . DIRECTORY_SEPARATOR . APP_NAME);
-            defined("APP_CONF_PATH") || define("APP_CONF_PATH", ROOT_PATH . DIRECTORY_SEPARATOR . 'conf' . DIRECTORY_SEPARATOR . APP_NAME);
+            defined("APP_CONF_PATH") || define("APP_CONF_PATH", APPLICATION_PATH . DIRECTORY_SEPARATOR . 'conf');
             defined("APP_MODE") || define("APP_MODE", get_cfg_var("yaf.environ"));
             $this->applicationPath = APPLICATION_PATH;
             $this->appConfPath = APP_CONF_PATH;
@@ -18,6 +18,7 @@ class Config {
             throw new ConfigException("Make sure you have defined " . $constName . " value");
         }
     }
+    //单例模式
     private static function app(){
         if(empty(self::$_configApp)){
             self::$_configApp = new self();
@@ -25,26 +26,25 @@ class Config {
         return self::$_configApp;
     }
 
+    /**对外输出接口 应用的路径path
+     * @return string
+     */
     public static function getApplicationPath(){
         return self::app()->applicationPath;
     }
 
-    public static function getAppConfPath(){
-        return self::app()->appConfPath;
-    }
-
-    public static function get($key="",$name=""){
-        $conf = self::app()->getConf($key);
+    public static function get($fileKey="application",$name=""){
+        $conf = self::app()->getConf($fileKey);
         if(!empty($name)){
         }
         return $conf;
     }
-    private function getConf($key=""){
-        $key = !empty($key) ? $key : "application";//默认获取application的配置
-        if(!empty($this->_config[$key])){
-            return $this->_config[$key];
+    private function getConf($fileKey=""){
+        $fileKey = !empty($fileKey) ? $fileKey : "application";//默认获取application的配置
+        if(!empty($this->_config[$fileKey])){
+            return $this->_config[$fileKey];
         }
-        $confFiles = $this->getConfFiles($key);
+        $confFiles = $this->getConfFiles($fileKey);
         $config = [];
         foreach($confFiles as $f){
             if(!isset($this->fileMap[$f])){
@@ -53,29 +53,30 @@ class Config {
             }
             $config[] = $this->fileMap[$f];
         }
-        $this->_config[$key] = $this->merge(...$config);
-        return $this->_config[$key];
+        $config = $this->setServerConfig($this->merge(...$config));
+        $this->_config[$fileKey] = $config;
+        return $this->_config[$fileKey];
     }
 
-    private function getConfFiles($key){
-        return array_filter([$this->getCommonConfigFile($key),$this->getAppConfigFile($key)]);
+    private function getConfFiles($fileKey){
+        return array_filter([$this->getCommonConfigFile($fileKey),$this->getAppConfigFile($fileKey)]);
     }
-
-    private function getCommonConfigFile($key){
+    //获取通用配置的文件
+    private function getCommonConfigFile($fileKey){
         if(defined("ROOT_PATH")){
-            $file = ROOT_PATH . DIRECTORY_SEPARATOR . "common" . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . $key . ".ini";
+            $file = ROOT_PATH . DIRECTORY_SEPARATOR . "common" . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . $fileKey . ".ini";
             return is_file($file) ? $file : "";
         }
         return "";
     }
-
-    private function getAppConfigFile($key){
-        if(empty($key)) return "";
-        $file = self::getAppConfPath() . DIRECTORY_SEPARATOR . $key . ".ini";
+    //获取应用下的配置
+    private function getAppConfigFile($fileKey){
+        if(empty($fileKey)) return "";
+        $file = $this->appConfPath . DIRECTORY_SEPARATOR . $fileKey . ".ini";
         return is_file($file) ? $file : "";
     }
 
-    private static function merge(){
+    private function merge(){
         $args = func_get_args();
         $res = array_shift($args);
         while (!empty($args)) {
@@ -94,9 +95,28 @@ class Config {
                 }
             }
         }
-
         return $res;
     }
+    private function setServerConfig($config=[]){
+        foreach($config as $k=>$c){
+            if(is_array($c)){
+                $config[$k] = $this->setServerConfig($c);
+            }elseif(is_string($c) && strpos($c,"MATRIX_") !== false){
+                $config[$k] = isset($_SERVER[$c]) ? $_SERVER[$c] : $c;
+            }
+        }
+        return $config;
+    }
+    //采用数组引用的方式会改变数组指针的指向，yaf底层是c语言实现，指针错乱会导致不可预知的异常，后续待查
+    private function setServerConfigBak(&$config = []){
+        $callback = function(&$value){
+            if(is_string($value) && strpos($value,"MATRIX_") !== false){
+                $value = isset($_SERVER[$value]) ? $_SERVER[$value] : $value;
+            }
+        };
+        array_walk_recursive($config, $callback);
+    }
+
 }
 
 class ConfigException extends Exception{

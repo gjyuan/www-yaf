@@ -16,7 +16,8 @@ class Init{
     }
 
     private static function runYaf($bootstrap = true){
-        $yaf = new Yaf_Application(Config::get());
+        $config = Config::get();
+        $yaf = new Yaf_Application($config);
         if($bootstrap){
             $yaf->bootstrap()->run();
         }else{
