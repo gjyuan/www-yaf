@@ -33,13 +33,28 @@ class Config {
         return self::app()->applicationPath;
     }
 
+    /**对外输出配置
+     * @param string $fileKey
+     * @param string $name
+     * @return mixed
+     */
     public static function get($fileKey="application",$name=""){
-        $conf = self::app()->getConf($fileKey);
-        if(!empty($name)){
-        }
-        return $conf;
+        $conf = self::app()->getConfMap($fileKey);
+        return self::app()->getValFromArrayByName($conf,$name);
     }
-    private function getConf($fileKey=""){
+
+    /**根据全部变量的值 application.pool.value 获取配置文件的值
+     * @param string $fullName
+     * @return array|string
+     */
+    public static function getValue($fullName=""){
+        list($fileKey,$name) = explode(',',$fullName,2);
+        if(empty($fileKey) || empty($name)) return [];
+        $conf = self::app()->getConfMap($fileKey);
+        return self::app()->getValFromArrayByName($conf,$name);
+    }
+    //获取配置全局array
+    private function getConfMap($fileKey=""){
         $fileKey = !empty($fileKey) ? $fileKey : "application";//默认获取application的配置
         if(!empty($this->_config[$fileKey])){
             return $this->_config[$fileKey];
@@ -57,7 +72,20 @@ class Config {
         $this->_config[$fileKey] = $config;
         return $this->_config[$fileKey];
     }
-
+    //根据名字获取数组的值
+    private function getValFromArrayByName($conf,$name){
+        if(empty($name)) return $conf;
+        $keyArr = explode(".",$name);
+        $val = $conf;
+        foreach($keyArr as $k){
+            if(!isset($val[$k])){
+                $val = ""; break;
+            }
+            $val = $val[$k];
+        }
+        return $val;
+    }
+    //根据fileKey获取配置文件列表
     private function getConfFiles($fileKey){
         return array_filter([$this->getCommonConfigFile($fileKey),$this->getAppConfigFile($fileKey)]);
     }
@@ -75,7 +103,7 @@ class Config {
         $file = $this->appConfPath . DIRECTORY_SEPARATOR . $fileKey . ".ini";
         return is_file($file) ? $file : "";
     }
-
+    //多配置文件配置合并
     private function merge(){
         $args = func_get_args();
         $res = array_shift($args);
@@ -97,6 +125,7 @@ class Config {
         }
         return $res;
     }
+    //替换 $_SERVER （fpm）中的配置
     private function setServerConfig($config=[]){
         foreach($config as $k=>$c){
             if(is_array($c)){
@@ -116,7 +145,6 @@ class Config {
         };
         array_walk_recursive($config, $callback);
     }
-
 }
 
 class ConfigException extends Exception{
