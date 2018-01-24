@@ -18,13 +18,6 @@ class Config {
             throw new ConfigException("Make sure you have defined " . $constName . " value");
         }
     }
-    //单例模式
-    private static function app(){
-        if(empty(self::$_configApp)){
-            self::$_configApp = new self();
-        }
-        return self::$_configApp;
-    }
 
     /**对外输出接口 应用的路径path
      * @return string
@@ -52,6 +45,13 @@ class Config {
         if(empty($fileKey) || empty($name)) return [];
         $conf = self::app()->getConfMap($fileKey);
         return self::app()->getValFromArrayByName($conf,$name);
+    }
+    //单例模式
+    private static function app(){
+        if(empty(self::$_configApp)){
+            self::$_configApp = new self();
+        }
+        return self::$_configApp;
     }
     //获取配置全局array
     private function getConfMap($fileKey=""){

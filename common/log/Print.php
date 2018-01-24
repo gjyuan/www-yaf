@@ -1,21 +1,18 @@
 <?php
-class Log_Print {
+class Log_Print extends Log_BaseVariablesOutPut {
+    protected $logPath;
     protected $logFile;
     protected $messages = [];
-    protected $fileMode;
-    protected $enableRotation = true;
+    protected $fileMode = 0755;
     protected $dirMode = 0755;
     protected $maxFileSize = 10240; //日志文件最大值 KB
     protected $maxLogFiles = 5;
-    protected $rotateByCopy = true;
+    protected $enableRotation = true;
+    private $_output;
+
 
     public function __construct(){
-        if ($this->logFile === null) {
-            $this->logFile = Yii::$app->getRuntimePath() . '/logs/app.log';
-        } else {
-            $this->logFile = Yii::getAlias($this->logFile);
-        }
-        $logPath = dirname($this->logFile);
+        $logPath = $this->getLogPath();
         if (!is_dir($logPath)) {
             Utils_File::createDirectory($logPath, $this->dirMode, true);
         }
@@ -25,20 +22,46 @@ class Log_Print {
         if ($this->maxFileSize < 1) {
             $this->maxFileSize = 1;
         }
+        $this->logFile = $this->getLogFile();
     }
-    public function getLogPath(){
+    /**
+     * 获取系统日志目录的位置 -
+     * 默认为当前项目根目录下
+     */
+    private function getLogPath(){
+        if (empty($this->logPath)){
+            $this->logPath = Config::getValue('log.path');
+            if(empty($this->logPath)){
+                $this->logPath = Config::getApplicationPath() . DIRECTORY_SEPARATOR . "logs";
+            }else{
+                $this->logPath = ROOT_PATH;
+            }
+        }
+        return rtrim($this->logPath,"\\/ ");
+    }
 
+    /**根据当前的日志级别和日期获取日志文件的名称
+     * @param int $level
+     * @param bool $divisionByDay
+     * @return string
+     */
+    private function getLogFile($level = Log_Consts::LEVEL_TRACE, $divisionByDay = true){
+        $level = empty($level) ? Log_Consts::LEVEL_TRACE : $level;
+        if($divisionByDay){
+            return $this->getLogPath() . DIRECTORY_SEPARATOR .APP_NAME . '-' .strtolower(Log_Consts::getLevelName($level)) . '-' . date('Ymd') . ".log";
+        }else{
+            return $this->getLogPath() . DIRECTORY_SEPARATOR .APP_NAME . '-' .strtolower(Log_Consts::getLevelName($level)) . ".log";
+        }
     }
-    public function formatMessage($message)
-    {
+
+    public function formatMessage($message){
         list($text, $level, $category, $timestamp) = $message;
         $level = Log_Consts::getLevelName($level);
         if (!is_string($text)) {
-            // exceptions may not be serializable if in the call stack somewhere is a Closure
             if ($text instanceof Throwable || $text instanceof Exception) {
                 $text = (string) $text;
             } else {
-                $text = $this->changeDemo($text);
+                $text = $this->formatExportVariable($text,0);
             }
         }
         $traces = [];
@@ -52,6 +75,169 @@ class Log_Print {
         return date('Y-m-d H:i:s', $timestamp) . " {$prefix}[$level][$category] $text"
             . (empty($traces) ? '' : "\n    " . implode("\n    ", $traces));
     }
+
+    private function formatExportVariable($var, $level){
+        $output = "";
+        switch (gettype($var)) {
+            case 'NULL':
+                $output = 'null';
+                break;
+            case 'array':
+                if (empty($var)) {
+                    $output = '[]';
+                } else {
+                    $keys = array_keys($var);
+                    $outputKeys = ($keys !== range(0, count($var) - 1));
+                    $spaces = str_repeat(' ', $level * 4);
+                    $output .= '[';
+                    foreach ($keys as $key) {
+                        $output .= "\n" . $spaces . '    ';
+                        if ($outputKeys) {
+                            $output .= $this->formatExportVariable($key, 0);
+                            $output .= ' => ';
+                        }
+                        $output .= $this->formatExportVariable($var[$key], $level + 1);
+                        $output .= ',';
+                    }
+                    $output .= "\n" . $spaces . ']';
+                }
+                break;
+            case 'object':
+                if ($var instanceof \Closure) {
+                    $output = $this->exportClosure($var);
+                } else {
+                    try {
+                        $output = 'unserialize(' . var_export(serialize($var), true) . ')';
+                    } catch (\Exception $e) {
+                        if ($var instanceof \IteratorAggregate) {
+                            $varAsArray = [];
+                            foreach ($var as $key => $value) {
+                                $varAsArray[$key] = $value;
+                            }
+                            $output .= $this->formatExportVariable($varAsArray, $level);
+                        } elseif ('__PHP_Incomplete_Class' !== get_class($var) && method_exists($var, '__toString')) {
+                            $output = var_export($var->__toString(), true);
+                        } else {
+                            $output = var_export($this->dumpInternal($var), true);
+                        }
+                    }
+                }
+                break;
+            default:
+                $this->_output .= var_export($var, true);
+        }
+        return $output;
+    }
+
+    /**
+     * Exports a [[Closure]] instance.
+     * @param \Closure $closure closure instance.
+     * @return string
+     */
+    private function exportClosure(Closure $closure)
+    {
+        $reflection = new ReflectionFunction($closure);
+
+        $fileName = $reflection->getFileName();
+        $start = $reflection->getStartLine();
+        $end = $reflection->getEndLine();
+
+        if ($fileName === false || $start === false || $end === false) {
+            return 'function() {/* Error: unable to determine Closure source */}';
+        }
+
+        --$start;
+
+        $source = implode("\n", array_slice(file($fileName), $start, $end - $start));
+        $tokens = token_get_all('<?php ' . $source);
+        array_shift($tokens);
+
+        $closureTokens = [];
+        $pendingParenthesisCount = 0;
+        foreach ($tokens as $token) {
+            if (isset($token[0]) && $token[0] === T_FUNCTION) {
+                $closureTokens[] = $token[1];
+                continue;
+            }
+            if ($closureTokens !== []) {
+                $closureTokens[] = isset($token[1]) ? $token[1] : $token;
+                if ($token === '}') {
+                    $pendingParenthesisCount--;
+                    if ($pendingParenthesisCount === 0) {
+                        break;
+                    }
+                } elseif ($token === '{') {
+                    $pendingParenthesisCount++;
+                }
+            }
+        }
+
+        return implode('', $closureTokens);
+    }
+    /**
+     * Writes log messages to a file.
+     * @throws InvalidConfigException if unable to open the log file for writing
+     */
+    private function export(){
+        $text = implode("\n", array_map([$this, 'formatMessage'], $this->messages)) . "\n";
+        if (($fp = @fopen($this->logFile, 'a')) === false) {
+            throw new Exception("Unable to append to log file: {$this->logFile}");
+        }
+        @flock($fp, LOCK_EX);
+        if ($this->enableRotation) {
+            clearstatcache();
+        }
+        if ($this->enableRotation && @filesize($this->logFile) > $this->maxFileSize * 1024) {
+            $this->rotateFiles();
+            @flock($fp, LOCK_UN);
+            @fclose($fp);
+            @file_put_contents($this->logFile, $text, FILE_APPEND | LOCK_EX);
+        } else {
+            @fwrite($fp, $text);
+            @flock($fp, LOCK_UN);
+            @fclose($fp);
+        }
+        if ($this->fileMode !== null) {
+            @chmod($this->logFile, $this->fileMode);
+        }
+    }
+
+    /**
+     * Rotates log files.
+     */
+    protected function rotateFiles()
+    {
+        $file = $this->logFile;
+        for ($i = $this->maxLogFiles; $i >= 0; --$i) {
+            // $i == 0 is the original log file
+            $rotateFile = $file . ($i === 0 ? '' : '.' . $i);
+            if (is_file($rotateFile)) {
+                // suppress errors because it's possible multiple processes enter into this section
+                if ($i === $this->maxLogFiles) {
+                    @unlink($rotateFile);
+                } else {
+                    if ($this->rotateByCopy) {
+                        @copy($rotateFile, $file . '.' . ($i + 1));
+                        if ($fp = @fopen($rotateFile, 'a')) {
+                            @ftruncate($fp, 0);
+                            @fclose($fp);
+                        }
+                        if ($this->fileMode !== null) {
+                            @chmod($file . '.' . ($i + 1), $this->fileMode);
+                        }
+                    } else {
+                        @rename($rotateFile, $file . '.' . ($i + 1));
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+
+
     public function getMessagePrefix($message)
     {
         if ($this->prefix !== null) {
@@ -136,98 +322,43 @@ class Log_Print {
                 self::$_output .= var_export($var, true);
         }
     }
-    /**
-     * Writes log messages to a file.
-     * @throws InvalidConfigException if unable to open the log file for writing
-     */
-    public function export(){
-        $text = implode("\n", array_map([$this, 'formatMessage'], $this->messages)) . "\n";
-        if (($fp = @fopen($this->logFile, 'a')) === false) {
-            throw new Exception("Unable to append to log file: {$this->logFile}");
-        }
-        @flock($fp, LOCK_EX);
-        if ($this->enableRotation) {
-            clearstatcache();
-        }
-        if ($this->enableRotation && @filesize($this->logFile) > $this->maxFileSize * 1024) {
-            $this->rotateFiles();
-            @flock($fp, LOCK_UN);
-            @fclose($fp);
-            @file_put_contents($this->logFile, $text, FILE_APPEND | LOCK_EX);
-        } else {
-            @fwrite($fp, $text);
-            @flock($fp, LOCK_UN);
-            @fclose($fp);
-        }
-        if ($this->fileMode !== null) {
-            @chmod($this->logFile, $this->fileMode);
-        }
-    }
-    /**
-     * Rotates log files.
-     */
-    protected function rotateFiles()
-    {
-        $file = $this->logFile;
-        for ($i = $this->maxLogFiles; $i >= 0; --$i) {
-            // $i == 0 is the original log file
-            $rotateFile = $file . ($i === 0 ? '' : '.' . $i);
-            if (is_file($rotateFile)) {
-                // suppress errors because it's possible multiple processes enter into this section
-                if ($i === $this->maxLogFiles) {
-                    @unlink($rotateFile);
-                } else {
-                    if ($this->rotateByCopy) {
-                        @copy($rotateFile, $file . '.' . ($i + 1));
-                        if ($fp = @fopen($rotateFile, 'a')) {
-                            @ftruncate($fp, 0);
-                            @fclose($fp);
-                        }
-                        if ($this->fileMode !== null) {
-                            @chmod($file . '.' . ($i + 1), $this->fileMode);
-                        }
-                    } else {
-                        @rename($rotateFile, $file . '.' . ($i + 1));
-                    }
-                }
-            }
-        }
-    }
 
 
-    public function export() {
-        $messageArray = $this->messages;
-        foreach($messageArray as $message){
-            $textArr =  array_map([$this, 'formatMessage'], array($message));
-            $text = self::$sequence.' '.$textArr[0];
-            $levelId = $message[1];
-            $level = Log_Consts::getLevelName($levelId);
-            $fileName = $this->logPath.$level . '-log-' .date('Ymd');
-            $this->logFile = $fileName;
-            if (($fp = @fopen($fileName, 'a')) === false) {
-                throw new InvalidConfigException("Unable to append to log file: {$fileName}");
-            }
-            @flock($fp, LOCK_EX);
-            if ($this->enableRotation) {
-                // clear stat cache to ensure getting the real current file size and not a cached one
-                // this may result in rotating twice when cached file size is used on subsequent calls
-                clearstatcache();
-            }
-            if ($this->enableRotation && @filesize($fileName) > $this->maxFileSize * 1024) {
-                $this->rotateFiles();
-                @flock($fp, LOCK_UN);
-                @fclose($fp);
-                @file_put_contents($fileName, $text, FILE_APPEND | LOCK_EX);
-            } else {
-                @fwrite($fp, $text);
-                @flock($fp, LOCK_UN);
-                @fclose($fp);
-            }
-            if ($this->fileMode !== null) {
-                @chmod($fileName, $this->fileMode);
-            }
-        }
-    }
+
+//
+//    public function export() {
+//        $messageArray = $this->messages;
+//        foreach($messageArray as $message){
+//            $textArr =  array_map([$this, 'formatMessage'], array($message));
+//            $text = self::$sequence.' '.$textArr[0];
+//            $levelId = $message[1];
+//            $level = Log_Consts::getLevelName($levelId);
+//            $fileName = $this->logPath.$level . '-log-' .date('Ymd');
+//            $this->logFile = $fileName;
+//            if (($fp = @fopen($fileName, 'a')) === false) {
+//                throw new InvalidConfigException("Unable to append to log file: {$fileName}");
+//            }
+//            @flock($fp, LOCK_EX);
+//            if ($this->enableRotation) {
+//                // clear stat cache to ensure getting the real current file size and not a cached one
+//                // this may result in rotating twice when cached file size is used on subsequent calls
+//                clearstatcache();
+//            }
+//            if ($this->enableRotation && @filesize($fileName) > $this->maxFileSize * 1024) {
+//                $this->rotateFiles();
+//                @flock($fp, LOCK_UN);
+//                @fclose($fp);
+//                @file_put_contents($fileName, $text, FILE_APPEND | LOCK_EX);
+//            } else {
+//                @fwrite($fp, $text);
+//                @flock($fp, LOCK_UN);
+//                @fclose($fp);
+//            }
+//            if ($this->fileMode !== null) {
+//                @chmod($fileName, $this->fileMode);
+//            }
+//        }
+//    }
 
 
 
@@ -288,23 +419,6 @@ class Log_Print {
     **/
     public static function getLogPrefix(){
         return Lj_AppEnv::getCurrApp();
-    }
-    /**
-     * @brief 日志打印的根目录
-     *
-     * @return  public static function
-     * @retval
-     * @see
-     * @note
-     * @author
-     * @date
-    **/
-    public static function getLogPath(){
-        if (self::$strLogPath == null){
-            self::$strLogPath = Lj_Conf::get("log.log_path");
-        }
-        return self::$strLogPath;
-
     }
     // 获取指定App的log对象，默认为当前App
     /**
