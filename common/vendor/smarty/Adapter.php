@@ -7,13 +7,10 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
      * @var Smarty
      */
     public $_smarty;
-
     /**
      * Constructor
-     *
      * @param string $tmplPath
      * @param array $extraParams
-     * @return void
      */
     public function __construct($tmplPath = null, $extraParams = array()) {
         $this->_smarty = new Smarty;
@@ -35,24 +32,20 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
     }
 
     /**
-     * Set the path to the templates
-     *
-     * @param string $path The directory to set as the path.
-     * @return void
+     * @param string $path
+     * @return bool
+     * @throws Exception
      */
     public function setScriptPath($path)
     {
         if (is_readable($path)) {
             $this->_smarty->template_dir = $path;
-            return;
+            return true;
         }
-
         throw new Exception('Invalid path provided');
     }
-    /**
-     * Retrieve the current template directory
-     *
-     * @return string
+    /** Retrieve the current template directory
+     * @return array
      */
     public function getScriptPath()
     {
@@ -61,25 +54,21 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
 
     /**
      * Alias for setScriptPath
-     *
      * @param string $path
      * @param string $prefix Unused
-     * @return void
+     * @return bool
      */
-    public function setBasePath($path, $prefix = 'Zend_View')
-    {
+    public function setBasePath($path, $prefix = 'Zend_View') {
         return $this->setScriptPath($path);
     }
 
     /**
      * Alias for setScriptPath
-     *
      * @param string $path
      * @param string $prefix Unused
-     * @return void
+     * @return bool
      */
-    public function addBasePath($path, $prefix = 'Zend_View')
-    {
+    public function addBasePath($path, $prefix = 'Zend_View') {
         return $this->setScriptPath($path);
     }
 
@@ -90,19 +79,16 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
      * @param mixed $val The variable value.
      * @return void
      */
-    public function __set($key, $val)
-    {
+    public function __set($key, $val) {
         $this->_smarty->assign($key, $val);
     }
 
     /**
      * Allows testing with empty() and isset() to work
-     *
      * @param string $key
      * @return boolean
      */
-    public function __isset($key)
-    {
+    public function __isset($key) {
         return (null !== $this->_smarty->get_template_vars($key));
     }
     /**
@@ -111,8 +97,7 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
      * @param string $key
      * @return void
      */
-    public function __unset($key)
-    {
+    public function __unset($key) {
         $this->_smarty->clear_assign($key);
     }
 

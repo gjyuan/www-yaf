@@ -12,12 +12,14 @@ class Init{
         defined("ROOT_PATH") || define("ROOT_PATH", dirname(__FILE__));
         defined("APPLICATION_PATH") || define("APPLICATION_PATH", ROOT_PATH . DIRECTORY_SEPARATOR . 'application' . DIRECTORY_SEPARATOR . APP_NAME);
         defined("APP_MODE") || define("APP_MODE", get_cfg_var("yaf.environ"));
+        defined("DATA_PATH") || define("DATA_PATH","");
         return true;
     }
 
     private static function runYaf($bootstrap = true){
         $config = Config::get();
         $yaf = new Yaf_Application($config);
+//        $yaf = new Yaf_Application(APPLICATION_PATH."/conf/application.ini");
         if($bootstrap){
             $yaf->bootstrap()->run();
         }else{

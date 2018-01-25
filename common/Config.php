@@ -41,7 +41,7 @@ class Config {
      * @return array|string
      */
     public static function getValue($fullName=""){
-        list($fileKey,$name) = explode(',',$fullName,2);
+        list($fileKey,$name) = explode('.',$fullName,2);
         if(empty($fileKey) || empty($name)) return [];
         $conf = self::app()->getConfMap($fileKey);
         return self::app()->getValFromArrayByName($conf,$name);

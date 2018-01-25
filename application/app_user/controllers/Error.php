@@ -5,7 +5,8 @@ class ErrorController extends Web_Controller_Base {
             $msg = $exception->getMessage();
             $this->error($msg);
         }else{
-            $this->show();
+            $msg = $exception->getMessage();
+            var_dump($msg);exit;
         }
     }
 }
