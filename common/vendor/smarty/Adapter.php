@@ -1,12 +1,12 @@
 <?php
 defined("SMARTY_PATH") || define("SMARTY_PATH",dirname(__FILE__));
-Yaf_Loader::import( SMARTY_PATH . "/Smarty.class.php");
+include SMARTY_PATH . "/Smarty.class.php";
 class Vendor_Smarty_Adapter implements Yaf_View_Interface {
     /**
      * Smarty object
      * @var Smarty
      */
-    public $_smarty;
+    private $_smarty;
     /**
      * Constructor
      * @param string $tmplPath
@@ -36,8 +36,7 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
      * @return bool
      * @throws Exception
      */
-    public function setScriptPath($path)
-    {
+    public function setScriptPath($path) {
         if (is_readable($path)) {
             $this->_smarty->template_dir = $path;
             return true;
@@ -47,8 +46,7 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
     /** Retrieve the current template directory
      * @return array
      */
-    public function getScriptPath()
-    {
+    public function getScriptPath(){
         return $this->_smarty->template_dir;
     }
 
@@ -135,18 +133,14 @@ class Vendor_Smarty_Adapter implements Yaf_View_Interface {
         $this->_smarty->clear_all_assign();
     }
 
-    /**
-     * Processes a template and returns the output.
-     *
-     * @param string $name The template to process.
-     * @return string The output.
-     */
-    public function render($name, $value = NULL) {
+    public function render($name, $params = []) {
+        $this->_smarty->assign($params);
         return $this->_smarty->fetch($name);
     }
 
-    public function display($name, $value = NULL) {
-        echo $this->_smarty->fetch($name);
+    public function display($name, $params = []) {
+        $this->_smarty->assign($params);
+        $this->_smarty->display($name);
     }
 
 }

@@ -20,9 +20,7 @@ class Bootstrap extends Yaf_Bootstrap_Abstract{
     }
 
     public function _initView(Yaf_Dispatcher $dispatcher){
-        //在这里注册自己的view控制器，例如smarty,firekylin
+        //在这里注册自己的view控制器,smarty 的使用放到Web_Controller_TplBase中去，当需要渲染页面的时候继承该基类
         $dispatcher->autoRender(false);
-        $smarty = new Vendor_Smarty_Adapter(null,Config::get('smarty'));
-        $dispatcher->setView($smarty);
     }
 }

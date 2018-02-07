@@ -25,6 +25,9 @@ class Config {
     public static function getApplicationPath(){
         return self::app()->applicationPath;
     }
+    public static function getTemplatePath(){
+        return APPLICATION_PATH . DIRECTORY_SEPARATOR ."views";
+    }
 
     /**对外输出配置
      * @param string $fileKey

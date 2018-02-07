@@ -1,4 +1,5 @@
 <?php
+ini_set("yaf.use_spl_autoload",1);
 /**
  * Project:     Smarty: the PHP compiling template engine
  * File:        Smarty.class.php
@@ -78,7 +79,7 @@ if (!defined('SMARTY_RESOURCE_DATE_FORMAT')) {
  * Otherwise we may have a global autoloader like Composer
  */
 if (!class_exists('Smarty_Autoloader', false)) {
-    if (!class_exists('Smarty_Internal_Data', true)) {
+    if (!class_exists('Smarty_Internal_Data', false)) {
         require_once dirname(__FILE__) . '/Autoloader.php';
         Smarty_Autoloader::registerBC();
     }

@@ -6,6 +6,9 @@ class Web_Controller_Base extends Yaf_Controller_Abstract{
     const RESPONSE_DATA = "data";
     const RESPONSE_IP = "ip";
     const RESPONSE_ID = "requestId";
+    protected function init(){
+        Yaf_Dispatcher::getInstance()->autoRender(false);//确定关闭自动渲染
+    }
     protected function setIsApi($isApi){
         global $_ISAPI;
         $_ISAPI = $isApi;

@@ -6,5 +6,10 @@
 </head>
 <body>
 HELLO {$name} test view!
+<ul>
+{foreach $list as $k=>$v}
+    <li>{$k}--{$v}</li>
+{/foreach}
+</ul>
 </body>
 </html>
