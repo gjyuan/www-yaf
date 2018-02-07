@@ -1,9 +1,13 @@
 <?php
-class Api_TestController extends Yaf_Controller_Abstract {
+class Api_TestController extends Web_Controller_ApiBase {
     public function indexAction(){
-        echo "dddddd";
+        $data = ["a"=>"b"];
+        $msg = "hahahaha";
+        $this->success($data,$msg);
     }
     public function hiAction() {
-        echo "hello world test";
+        $data = ["a"=>"b"];
+        $msg = "my name is hi";
+        $this->success($data,$msg);
     }
 }
