@@ -72,7 +72,6 @@ class Vendor_Curl_Curl{
     public function addHeaders(array $headers){
         $this->_headers = array_merge($this->_headers,$headers);
     }
-
     public function addCookies(array $cookies){
         $this->_cookies = array_merge($this->_cookies,$cookies);
     }
@@ -117,13 +116,13 @@ class Vendor_Curl_Curl{
      * @return array
      * @throws Exception
      */
-    public function httpExecute($url=""){
+    public function httpExecute(){
         try{
             $ch = $this->__curlInit();
             $result = curl_exec($ch);
             $errno = curl_errno($ch);
             if ($errno == CURLE_COULDNT_CONNECT) {
-                $msg = "Curl error [Can not connect " . $url . " error:" . $errno . '-' . curl_error($ch) ."]";
+                $msg = "Curl error [Can not connect " . $this->getUrl() . " error:" . $errno . '-' . curl_error($ch) ."]";
                 return [false,$msg];
             }
             if ($errno != CURLE_OK) {
@@ -140,7 +139,5 @@ class Vendor_Curl_Curl{
         }catch (Exception $e){
             return [false,$e->getMessage()];
         }
-
     }
-
 }

@@ -1,5 +1,5 @@
 <?php
-class Vendor_Curl_CurlMuti{
+class Vendor_Curl_MultiCurl{
     private $_getParams = [];
     private $_postParams = [];
     private $_headers = [];
