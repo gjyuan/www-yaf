@@ -3,7 +3,7 @@ class Api_TestController extends Web_Controller_ApiBase {
     public function indexAction(){
         $data = ["a"=>"b"];
         $msg = "hahahaha";
-        $result = Utils_Curl::get("http://localhost/");
+        $result = Utils_Curl::forward();
         $this->success($result,$msg);
     }
     public function hiAction() {
