@@ -32,6 +32,16 @@ class Vendor_Curl_MultiCurl{
         curl_multi_add_handle($this->_multi_ch,$instance);
         $this->_ch_arr[] = $instance;
     }
+    public function addRequestWithKey($key,$url,$getParams=[],$postParams=[],$header=[],$cookie=[]){
+        $curl = new Vendor_Curl_Instance($url);
+        $curl->addGetParams($getParams);
+        $curl->addPostParams($postParams);
+        $curl->addHeaders($header);
+        $curl->addCookies($cookie);
+        $instance = $curl->getCurlHandle();
+        curl_multi_add_handle($this->_multi_ch,$instance);
+        $this->_ch_arr[$key] = $instance;
+    }
     //执行curl
     public function execute(){
         try{
@@ -50,7 +60,7 @@ class Vendor_Curl_MultiCurl{
             //4.关闭子curl 并获取结果
             foreach($this->_ch_arr as $k=>$ch){
                 if(get_resource_type($ch) == "curl"){
-                    $response[$k] = curl_multi_getcontent($ch);
+                    $response[$k] = $this->analyJson(curl_multi_getcontent($ch));
                     curl_multi_remove_handle($this->_multi_ch, $ch);
                 }else{
                     $response[$k] = $ch;
@@ -64,5 +74,8 @@ class Vendor_Curl_MultiCurl{
         }
     }
 
-
+    private function analyJson($value) {
+        $data = json_decode($value,true);
+        return (json_last_error() == JSON_ERROR_NONE) ? $data : $value;
+    }
 }

@@ -16,10 +16,26 @@ class Utils_Curl {
         list($st,$result) = $curl->httpExecute();
         return $result;
     }
-    public static function forward(){
-        $multiCurl = new Vendor_Curl_MultiCurl();
-        $multiCurl->addRequest("http://localhost");
-        $res = $multiCurl->execute();
-        echo json_encode($res);exit;
+    public static function multiCurl(array $requestArr){
+        try{
+            if(empty($requestArr)) return [];
+            $multiCurl = new Vendor_Curl_MultiCurl();
+            foreach($requestArr as $key=>$rqMap){
+                if(isset($rqMap['url']) && !empty($rqMap['url'])){
+                    $url = $rqMap['url'];
+                    $getParams = isset($rqMap['get']) ? $rqMap['get'] : [];
+                    $postParams = isset($rqMap['post']) ? $rqMap['post'] : [];
+                    $cookieParams = isset($rqMap['cookie']) ? $rqMap['cookie'] : [];
+                    $headerParams = isset($rqMap['header']) ? $rqMap['header'] : [];
+                    $multiCurl->addRequestWithKey($key,$url,$getParams,$postParams,$headerParams,$cookieParams);
+                }else{
+                    throw new Exception("Multi curl params must contain url value".var_export($requestArr));
+                }
+            }
+            return $multiCurl->execute();
+        }catch (Exception $e){
+            var_export($e->getMessage());
+            return [false,[]];
+        }
     }
 }
