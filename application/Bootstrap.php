@@ -15,7 +15,7 @@ class Bootstrap extends Yaf\Bootstrap_Abstract{
 
     public function _initRoute(Yaf\Dispatcher $dispatcher) {
         //在这里注册自己的路由协议,默认使用简单路由
-        $dispatcher->getRouter()->addRoute("appRouter",new Router\AppRouter());
+        $dispatcher->getRouter()->addRoute("appRouter",new vendor\router\AppRouter());
 //        $dispatcher->getRouter()->addRoute('default',new Yaf\Route_Static());
     }
 

@@ -1,5 +1,5 @@
 <?php
-namespace Router;
+namespace vendor\router;
 class AppRouter implements \Yaf\Route_Interface{
     private $_applicationDirectory;
     private $_defaultController;
