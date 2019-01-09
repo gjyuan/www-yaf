@@ -7,7 +7,7 @@ class AppRouter implements \Yaf\Route_Interface{
 
     private function getApplicationDirectory(){
         if(empty($this->_applicationDirectory)){
-            $this->_applicationDirectory = \Config::getValue('application.application.directory');
+            $this->_applicationDirectory = trim(\Config::get('application.application.directory'),DIRECTORY_SEPARATOR) .DIRECTORY_SEPARATOR;
         }
         return $this->_applicationDirectory;
     }
@@ -30,13 +30,15 @@ class AppRouter implements \Yaf\Route_Interface{
 
     private function getControllerName($controllerArr = []){
         $controllerArr = is_array($controllerArr) ? $controllerArr : [$controllerArr];
-        foreach($controllerArr as &$c){
-            $c = ucfirst($c);
+        $conArr = [];
+        foreach($controllerArr as $c){
+            $conArr[] = ucfirst($c);
         }
+        $fileName = ucfirst(array_pop($controllerArr));
         $controllerRoute = implode(DIRECTORY_SEPARATOR,$controllerArr);
-        $cFile = $this->getApplicationDirectory() . DIRECTORY_SEPARATOR . "controllers" . DIRECTORY_SEPARATOR . $controllerRoute . ".php";
+        $cFile = $this->getApplicationDirectory() . "controllers" . DIRECTORY_SEPARATOR . $controllerRoute . DIRECTORY_SEPARATOR . $fileName . ".php";
         if(is_file($cFile)){
-            return implode("_",$controllerArr);
+            return implode("_",$conArr);
         }else{
             return false;
         }
@@ -55,7 +57,7 @@ class AppRouter implements \Yaf\Route_Interface{
             default:
                 $controller = $this->getControllerName($uriArr);
                 if(!$controller){
-                    $action = array_pop($uriArr);
+                    $action = ucfirst(array_pop($uriArr));
                     $controller = $this->getControllerName($uriArr);
                 }else{
                     $action = $this->getDefaultAction();

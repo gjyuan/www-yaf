@@ -1,81 +1,64 @@
 <?php
-
 class Config {
-    private $applicationPath;
     private $appConfPath;
     private $_config;
     private $fileMap;
     private static $_configApp;
-    public function __construct(){
-        if(defined("ROOT_PATH") && defined("APP_NAME")) {
-            defined("APPLICATION_PATH") || define("APPLICATION_PATH", ROOT_PATH . DIRECTORY_SEPARATOR . 'application' . DIRECTORY_SEPARATOR . APP_NAME);
-            defined("APP_CONF_PATH") || define("APP_CONF_PATH", APPLICATION_PATH . DIRECTORY_SEPARATOR . 'conf');
+    private function __construct(){
+        if(defined("CONFIG_PATH")) {
             defined("APP_MODE") || define("APP_MODE", get_cfg_var("yaf.environ"));
-            $this->applicationPath = APPLICATION_PATH;
-            $this->appConfPath = APP_CONF_PATH;
+            $this->appConfPath = CONFIG_PATH;
         }else{
-            $constName = defined("APP_NAME") ? "APP_NAME" : "ROOT_PATH";
-            throw new ConfigException("Make sure you have defined " . $constName . " value");
+            throw new ConfigException("Make sure you have defined CONFIG_PATH value");
         }
     }
-
-    /**对外输出接口 应用的路径path
-     * @return string
-     */
-    public static function getApplicationPath(){
-        return self::app()->applicationPath;
-    }
-    public static function getTemplatePath(){
-        return APPLICATION_PATH . DIRECTORY_SEPARATOR ."views";
-    }
-
-    /**对外输出配置
-     * @param string $fileKey
-     * @param string $name
-     * @return mixed
-     */
-    public static function get($fileKey="application",$name=""){
-        $conf = self::app()->getConfMap($fileKey);
-        return self::app()->getValFromArrayByName($conf,$name);
-    }
-
-    /**根据全部变量的值 application.pool.value 获取配置文件的值
-     * @param string $fullName
-     * @return array|string
-     */
-    public static function getValue($fullName=""){
-        list($fileKey,$name) = explode('.',$fullName,2);
-        if(empty($fileKey) || empty($name)) return [];
-        $conf = self::app()->getConfMap($fileKey);
-        return self::app()->getValFromArrayByName($conf,$name);
-    }
-    //单例模式
     private static function app(){
         if(empty(self::$_configApp)){
             self::$_configApp = new self();
         }
         return self::$_configApp;
     }
+
+    /**对外输出配置
+     * 获取配置信息 默认输出application的信息
+     * 接收两种类型参数：
+     * 一个参数：string configFileName.key.key eg:application.application.directory
+     * 两个参数：string configFileName , string key.key  eg:get('application','application.directory')
+     * @return string
+     */
+    public static function get(){
+        $argsNum = func_num_args();
+        if($argsNum == 1){
+            $args = explode('.',func_get_arg(0),2);
+            $configFileName = $args[0] ?? "";
+            $name = $args[1] ?? "";
+            if(empty($configFileName)) return "";
+        }elseif($argsNum == 2){
+            $configFileName = func_get_arg(0);
+            $name = func_get_arg(1);
+        }else{
+            return "";
+        }
+        $conf = self::app()->getConfigMap($configFileName);
+        return self::app()->getValFromArrayByName($conf,$name);
+    }
+
     //获取配置全局array
-    private function getConfMap($fileKey=""){
+    private function getConfigMap($fileKey=""){
         $fileKey = !empty($fileKey) ? $fileKey : "application";//默认获取application的配置
         if(!empty($this->_config[$fileKey])){
             return $this->_config[$fileKey];
         }
-        $confFiles = $this->getConfFiles($fileKey);
-        $config = [];
-        foreach($confFiles as $f){
-            if(!isset($this->fileMap[$f])){
-                $confIni = new \Yaf\Config\Ini($f);
-                $this->fileMap[$f] = $confIni->get(APP_MODE)->toArray();
-            }
-            $config[] = $this->fileMap[$f];
+        $confFile = $this->getConfFile($fileKey);
+        if(!isset($this->fileMap[$confFile])){
+            $confIni = new \Yaf\Config\Ini($confFile);
+            $this->fileMap[$confFile] = $confIni->get(APP_MODE)->toArray();
         }
-        $config = $this->setServerConfig($this->merge(...$config));
+        $config = $this->setServerConfig($this->fileMap[$confFile]);
         $this->_config[$fileKey] = $config;
         return $this->_config[$fileKey];
     }
-    //根据名字获取数组的值
+
     private function getValFromArrayByName($conf,$name){
         if(empty($name)) return $conf;
         $keyArr = explode(".",$name);
@@ -88,9 +71,23 @@ class Config {
         }
         return $val;
     }
+    //替换 $_SERVER （fpm）中的配置
+    private function setServerConfig($config=[]){
+        foreach($config as $k=>$c){
+            if(is_array($c)){
+                $config[$k] = $this->setServerConfig($c);
+            }elseif(is_string($c) && strpos($c,"MATRIX_") !== false){
+                $config[$k] = isset($_SERVER[$c]) ? $_SERVER[$c] : $c;
+            }
+        }
+        return $config;
+    }
     //根据fileKey获取配置文件列表
+    private function getConfFile($fileKey){
+        return CONFIG_PATH . DIRECTORY_SEPARATOR . $fileKey . ".ini";
+    }
     private function getConfFiles($fileKey){
-        return array_filter([$this->getCommonConfigFile($fileKey),$this->getAppConfigFile($fileKey)]);
+        return [CONFIG_PATH . DIRECTORY_SEPARATOR . $fileKey . ".ini"];
     }
     //获取通用配置的文件
     private function getCommonConfigFile($fileKey){
@@ -128,17 +125,7 @@ class Config {
         }
         return $res;
     }
-    //替换 $_SERVER （fpm）中的配置
-    private function setServerConfig($config=[]){
-        foreach($config as $k=>$c){
-            if(is_array($c)){
-                $config[$k] = $this->setServerConfig($c);
-            }elseif(is_string($c) && strpos($c,"MATRIX_") !== false){
-                $config[$k] = isset($_SERVER[$c]) ? $_SERVER[$c] : $c;
-            }
-        }
-        return $config;
-    }
+
     //采用数组引用的方式会改变数组指针的指向，yaf底层是c语言实现，指针错乱会导致不可预知的异常，后续待查
     private function setServerConfigBak(&$config = []){
         $callback = function(&$value){
@@ -149,6 +136,24 @@ class Config {
         array_walk_recursive($config, $callback);
     }
 }
-
+//    private function getConfMap($fileKey=""){
+//        $fileKey = !empty($fileKey) ? $fileKey : "application";//默认获取application的配置
+//        if(!empty($this->_config[$fileKey])){
+//            return $this->_config[$fileKey];
+//        }
+//        $confFiles = $this->getConfFiles($fileKey);
+//        $config = [];
+//        foreach($confFiles as $f){
+//            if(!isset($this->fileMap[$f])){
+//                $confIni = new \Yaf\Config\Ini($f);
+//                $this->fileMap[$f] = $confIni->get(APP_MODE)->toArray();
+//            }
+//            $config[] = $this->fileMap[$f];
+//        }
+//        $config = $this->setServerConfig($this->merge(...$config));
+//        $this->_config[$fileKey] = $config;
+//        return $this->_config[$fileKey];
+//    }
+//根据名字获取数组的值
 class ConfigException extends Exception{
 }
