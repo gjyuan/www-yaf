@@ -66,7 +66,7 @@ class Config {
         $config = [];
         foreach($confFiles as $f){
             if(!isset($this->fileMap[$f])){
-                $confIni = new Yaf_Config_Ini($f);
+                $confIni = new \Yaf\Config\Ini($f);
                 $this->fileMap[$f] = $confIni->get(APP_MODE)->toArray();
             }
             $config[] = $this->fileMap[$f];

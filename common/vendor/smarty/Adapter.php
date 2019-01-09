@@ -1,7 +1,7 @@
 <?php
 defined("SMARTY_PATH") || define("SMARTY_PATH",dirname(__FILE__));
 include SMARTY_PATH . "/Smarty.class.php";
-class Vendor_Smarty_Adapter implements Yaf_View_Interface {
+class Vendor_Smarty_Adapter implements \Yaf\View_Interface {
     /**
      * Smarty object
      * @var Smarty

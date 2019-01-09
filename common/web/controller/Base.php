@@ -1,13 +1,15 @@
 <?php
+namespace Web\Controller;
 global $_ISAPI;//此处定义全局变量标识是否是API接口，仅限于本文件中使用，其他地方请勿引用并修改，否则后果自负
-class Web_Controller_Base extends Yaf_Controller_Abstract{
+use \Consts\ResponseCode;
+class Base extends \Yaf\Controller_Abstract{
     const RESPONSE_CODE = "code";
     const RESPONSE_MSG = "msg";
     const RESPONSE_DATA = "data";
     const RESPONSE_IP = "ip";
     const RESPONSE_ID = "requestId";
     protected function init(){
-        Yaf_Dispatcher::getInstance()->autoRender(false);//确定关闭自动渲染
+        \Yaf\Dispatcher::getInstance()->autoRender(false);//确定关闭自动渲染
     }
     protected function setIsApi($isApi){
         global $_ISAPI;
@@ -18,7 +20,7 @@ class Web_Controller_Base extends Yaf_Controller_Abstract{
         return $_ISAPI;
     }
 
-    protected function success($data = null,$msg = "success",$code = Consts_Code::RESPONSE_SUCCESS){
+    protected function success($data = null,$msg = "success",$code = ResponseCode::RESPONSE_SUCCESS){
         $result = array(
             self::RESPONSE_CODE => $code,
             self::RESPONSE_DATA => $data,
@@ -27,7 +29,7 @@ class Web_Controller_Base extends Yaf_Controller_Abstract{
         );
         $this->echoResponse($result);
     }
-    protected function error($msg = "request failed", $code = Consts_Code::RESPONSE_ERROR, mixed $data = null){
+    protected function error($msg = "request failed", $code = ResponseCode::RESPONSE_ERROR, mixed $data = null){
         $result = array(
             self::RESPONSE_CODE => $code,
             self::RESPONSE_DATA => $data,

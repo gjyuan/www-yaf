@@ -1,5 +1,6 @@
 <?php
-class IndexController extends Web_Controller_ApiBase {
+use Web\Controller\ApiBase;
+class IndexController extends ApiBase {
 
     public function indexAction() {
         var_dump(new Vendor_Smarty_Adapter());

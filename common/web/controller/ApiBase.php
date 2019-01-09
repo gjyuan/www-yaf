@@ -1,5 +1,6 @@
 <?php
-class Web_Controller_ApiBase extends Web_Controller_Base{
+namespace Web\Controller;
+class ApiBase extends Base{
     protected function init(){
         parent::init();
         $this->setIsApi(true);

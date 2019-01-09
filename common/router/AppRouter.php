@@ -1,19 +1,20 @@
 <?php
-class Router_AppRouter implements Yaf_Route_Interface{
+namespace Router;
+class AppRouter implements \Yaf\Route_Interface{
     private $_applicationDirectory;
     private $_defaultController;
     private $_defaultAction;
 
     private function getApplicationDirectory(){
         if(empty($this->_applicationDirectory)){
-            $this->_applicationDirectory = Config::getValue('application.application.directory');
+            $this->_applicationDirectory = \Config::getValue('application.application.directory');
         }
         return $this->_applicationDirectory;
     }
 
     private function getDefaultController(){
         if(empty($this->_defaultController)){
-            $controller = Config::get('application',"application.dispatcher.defaultController");
+            $controller = \Config::get('application',"application.dispatcher.defaultController");
             $this->_defaultController = empty($controller) ? "Index" : $controller;
         }
         return $this->_defaultController;
@@ -21,7 +22,7 @@ class Router_AppRouter implements Yaf_Route_Interface{
 
     private function getDefaultAction(){
         if(empty($this->_defaultAction)){
-            $action = Config::get('application',"application.dispatcher.defaultAction");
+            $action = \Config::get('application',"application.dispatcher.defaultAction");
             $this->_defaultAction = empty($action) ? "index" : $action;
         }
         return $this->_defaultAction;

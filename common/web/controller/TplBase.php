@@ -1,6 +1,6 @@
 <?php
-
-class Web_Controller_TplBase extends Web_Controller_Base{
+namespace Web\Controller;
+class TplBase extends Base{
     private $__smarty;
     private $__tplPath = null;
     protected function init(){
@@ -10,7 +10,7 @@ class Web_Controller_TplBase extends Web_Controller_Base{
     }
     private function _getSmarty(){
         if(empty($this->__smarty)){
-            $this->__smarty = new Vendor_Smarty_Adapter($this->getTplPath(),Config::get('smarty'));
+            $this->__smarty = new \Vendor_Smarty_Adapter($this->getTplPath(),Config::get('smarty'));
         }
         return $this->__smarty;
     }
@@ -18,14 +18,14 @@ class Web_Controller_TplBase extends Web_Controller_Base{
         if(is_dir($tplPath)){
             $this->__tplPath = rtrim($tplPath,'\\/') . DIRECTORY_SEPARATOR;
         }else{
-            throw new Exception("Template path: {$tplPath} is not exist");
+            throw new \Exception("Template path: {$tplPath} is not exist");
         }
     }
     protected function getTplPath(){
         return !empty($this->__tplPath) ? $this->__tplPath : "./";//为空则返回当前路径
     }
     private function getTplPostfix(){
-        $postfix = Config::get("application",'application.view.ext');
+        $postfix = \Config::get("application",'application.view.ext');
         return !empty($postfix) ? $postfix : "phtml";
     }
     private function getTplFile($tpl=""){
@@ -40,7 +40,7 @@ class Web_Controller_TplBase extends Web_Controller_Base{
         if(is_file($tplFile)) {
             return $tplFile;
         }else{
-            throw new Exception("Missing template {$tplFile}");
+            throw new \Exception("Missing template {$tplFile}");
         }
     }
     protected function display($tplName, $params = array()){
