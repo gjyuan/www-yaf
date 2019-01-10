@@ -1,5 +1,6 @@
 <?php
-class Utils_Curl {
+namespace utils;
+class Curl {
     public static function get($url,$params=[],array $header = [],$withCookie = true){
         $curl = new Vendor_Curl_Curl($url);
         $curl->addGetParams($params);

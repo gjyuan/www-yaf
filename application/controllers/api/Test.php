@@ -2,6 +2,7 @@
 use vendor\web\controller\ApiBase;
 class Api_TestController extends ApiBase {
     public function indexAction(){
+        new vendor\guzzle\Client();exit;
         $result = ['a'=>1,'b'=>2];
         $msg = "ddddd";
         $this->success($result,$msg);
