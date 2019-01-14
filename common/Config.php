@@ -43,20 +43,34 @@ class Config {
         return self::app()->getValFromArrayByName($conf,$name);
     }
 
+    /**指定配置文件目录，读取该目录下的配置信息
+     * @param string $path 建议用绝对路径
+     * @param string $configKey 配置信息 eg：neirong-api.url
+     * @return string
+     */
+    public static function getByPath($path,$configKey){
+        $args = explode('.',func_get_arg(0),2);
+        $configFileName = $args[0] ?? "";
+        $name = $args[1] ?? "";
+        if(empty($configFileName)) return "";
+        $conf = self::app()->getConfigMap($configFileName);
+        return self::app()->getValFromArrayByName($conf,$name);
+    }
+
     //获取配置全局array
-    private function getConfigMap($fileKey=""){
-        $fileKey = !empty($fileKey) ? $fileKey : "application";//默认获取application的配置
-        if(!empty($this->_config[$fileKey])){
-            return $this->_config[$fileKey];
+    private function getConfigMap($fileName = "", $configPath = CONFIG_PATH){
+        $fileName = !empty($fileName) ? $fileName : "application";//默认获取application的配置
+        if(!empty($this->_config[$fileName])){
+            return $this->_config[$fileName];
         }
-        $confFile = $this->getConfFile($fileKey);
+        $confFile = $this->getConfFile($fileName,$configPath);
         if(!isset($this->fileMap[$confFile])){
             $confIni = new \Yaf\Config\Ini($confFile);
             $this->fileMap[$confFile] = $confIni->get(APP_MODE)->toArray();
         }
         $config = $this->setServerConfig($this->fileMap[$confFile]);
-        $this->_config[$fileKey] = $config;
-        return $this->_config[$fileKey];
+        $this->_config[$fileName] = $config;
+        return $this->_config[$fileName];
     }
 
     private function getValFromArrayByName($conf,$name){
@@ -83,8 +97,8 @@ class Config {
         return $config;
     }
     //根据fileKey获取配置文件列表
-    private function getConfFile($fileKey){
-        return CONFIG_PATH . DIRECTORY_SEPARATOR . $fileKey . ".ini";
+    private function getConfFile($fileKey, $path = CONFIG_PATH){
+        return rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $fileKey . ".ini";
     }
     private function getConfFiles($fileKey){
         return [CONFIG_PATH . DIRECTORY_SEPARATOR . $fileKey . ".ini"];
