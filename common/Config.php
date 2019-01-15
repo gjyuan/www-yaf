@@ -49,11 +49,11 @@ class Config {
      * @return string
      */
     public static function getByPath($path,$configKey){
-        $args = explode('.',func_get_arg(0),2);
+        $args = explode('.',$configKey,2);
         $configFileName = $args[0] ?? "";
         $name = $args[1] ?? "";
         if(empty($configFileName)) return "";
-        $conf = self::app()->getConfigMap($configFileName);
+        $conf = self::app()->getConfigMap($configFileName,$path);
         return self::app()->getValFromArrayByName($conf,$name);
     }
 
