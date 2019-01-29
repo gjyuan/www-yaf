@@ -1,5 +1,7 @@
 <?php
 namespace vendor\guzzle;
+use GuzzleHttp\Cookie\CookieJar;
+use GuzzleHttp\Psr7\Response;
 use vendor\composer\Base;
 class Client extends Base {
     const METHOD_GET = "GET";
@@ -9,9 +11,9 @@ class Client extends Base {
     protected $_service;//服务名称 关联配置文件
     protected $_baseUri;
     protected $_host;
-    protected $_codeField;
-    protected $_msgField;
-    protected $_dataField;
+    protected $_codeKey;
+    protected $_msgKey = "msg";
+    protected $_dataKey = "data";
     protected $_client;
     protected $_requestMethod  = "GET";
     protected $_requestUri;
@@ -20,15 +22,19 @@ class Client extends Base {
     protected $_headers = [];
     protected $_cookies = [];
     protected $_upload = [];
-    protected $_connectTimeout = 1;//
+    protected $_connectTimeout = 1;//默认
     protected $_requestTimeout = 1.5;//请求超时时间默认1.5s
+
+    protected $_successCode = null;
+    protected $_onlyJsonResult = false;
 
     protected function init(){
         $config = $this->getServiceConfig($this->getService());
         $this->setBaseUri($config['baseUri'] ?? "");
-        $this->setCodeField($config['codeField'] ?? "");
-        $this->setDataField($config['dataField'] ?? "");
-        $this->setMsgField($config['msgField'] ?? "");
+        $this->setCodeKey($config['codeKey'] ?? "");
+        $this->setDataKey($config['dataKey'] ?? "");
+        $this->setMsgKey($config['msgKey'] ?? "");
+        $this->setSuccessCode($config['successCode'] ?? "");
         $this->setConnectTimeout($config['connectTimeout'] ?? 1);
         $this->setConnectTimeout($config['requestTimeout'] ?? 1.5);
     }
@@ -55,22 +61,58 @@ class Client extends Base {
     }
 
     protected function getOption(){
-        $option = [];
+        $option = [
+            'connect_timeout' => $this->getConnectTimeout(),
+            'timeout'         => $this->getRequestTimeout(),
+        ];
+        if(!empty($this->getHeaders())){
+            $option['headers'] = $this->getHeaders();
+        }
         if(!empty($this->getQueryParams())){
             $option['query'] = $this->getQueryParams();
         }
+        if(!empty($this->getPostParams())){
+
+            $option['form_params'] = $this->getPostParams();
+        }
+
+
+
         return $option;
     }
 
-    protected function send(){
+    /**
+     * @return Result
+     */
+    protected function request(){
         $option = $this->getOption();
-        $response = $this->getClient()->request($this->getRequestMethod(),$this->getRequestUri(),$option);
-        return $response;
+        $response = $this->getClient()->request($this->getRequestMethod(),$this->getRequestUrl(),$option);
+        return $this->getResultObj($response);
+    }
+
+    private function getResultObj(Response $response){
+        $result = new Result($this->getCodeKey(),$this->getDataKey(),$this->getMsgKey(),$this->getSuccessCode());
+        $result->setResponse($response);
+        return $result;
     }
 
     protected function getServiceConfig($configKey){
         if(empty($configKey)) return [];
         return \Config::getByPath(CONFIG_PATH . DIRECTORY_SEPARATOR . "service", $configKey);
+    }
+
+    /**获取请求的url，连带query 参数
+     * @return string
+     */
+    private function getRequestUrl(){
+        $queryParams = $this->getQueryParams();
+        $uri = $this->getRequestUri();
+        if(strpos('?',$uri) === false){
+            $url = $uri . "?" . \GuzzleHttp\Psr7\build_query($queryParams);
+        }else{
+            $url = $uri . "&" . \GuzzleHttp\Psr7\build_query($queryParams);
+        }
+        return $url;
     }
 
     /**
@@ -86,7 +128,7 @@ class Client extends Base {
      */
     protected function setQueryParams(array $queryParams)
     {
-        $this->_queryParams = $queryParams;
+        $this->_queryParams = array_merge($this->_queryParams,$queryParams);
     }
 
     /**
@@ -102,7 +144,7 @@ class Client extends Base {
      */
     protected function setPostParams(array $postParams)
     {
-        $this->_postParams = $postParams;
+        $this->_postParams = array_merge($this->_postParams,$postParams);
     }
 
     /**
@@ -204,50 +246,68 @@ class Client extends Base {
     /**
      * @return mixed
      */
-    protected function getCodeField()
+    public function getCodeKey()
     {
-        return $this->_codeField;
+        return $this->_codeKey;
     }
 
     /**
-     * @param mixed $codeField
+     * @param mixed $codeKey
      */
-    protected function setCodeField($codeField)
+    public function setCodeKey($codeKey)
     {
-        $this->_codeField = $codeField;
+        $this->_codeKey = $codeKey;
     }
 
     /**
-     * @return mixed
+     * @return string
      */
-    protected function getMsgField()
+    public function getMsgKey(): string
     {
-        return $this->_msgField;
+        return $this->_msgKey;
     }
 
     /**
-     * @param mixed $msgField
+     * @param string $msgKey
      */
-    protected function setMsgField($msgField)
+    public function setMsgKey(string $msgKey)
     {
-        $this->_msgField = $msgField;
+        $this->_msgKey = $msgKey;
     }
 
     /**
-     * @return mixed
+     * @return string
      */
-    protected function getDataField()
+    public function getDataKey(): string
     {
-        return $this->_dataField;
+        return $this->_dataKey;
     }
 
     /**
-     * @param mixed $dataField
+     * @param string $dataKey
      */
-    protected function setDataField($dataField)
+    public function setDataKey(string $dataKey)
     {
-        $this->_dataField = $dataField;
+        $this->_dataKey = $dataKey;
     }
+
+    /**
+     * @return string
+     */
+    public function getSuccessCode(): string
+    {
+        return $this->_successCode;
+    }
+
+    /**
+     * @param string $successCode
+     */
+    public function setSuccessCode(string $successCode)
+    {
+        $this->_successCode = $successCode;
+    }
+
+
 
     /**
      * @return string
@@ -270,7 +330,7 @@ class Client extends Base {
      */
     protected function getConnectTimeout(): int
     {
-        return $this->_connectTimeout;
+        return (int)($this->_connectTimeout > 0 ? $this->_connectTimeout : 1);
     }
 
     /**
@@ -286,7 +346,7 @@ class Client extends Base {
      */
     protected function getRequestTimeout(): int
     {
-        return $this->_requestTimeout;
+        return (int)($this->_requestTimeout > 0 ? $this->_requestTimeout : 1);
     }
 
     /**
@@ -302,15 +362,36 @@ class Client extends Base {
      */
     public function getRequestUri()
     {
+        $getParams = $this->getQueryParams();
         return $this->_requestUri;
     }
 
     /**
      * @param mixed $requestUri
      */
-    public function setRequestUri($requestUri)
+    public function setRequestUri($requestUri,$method="")
     {
         $this->_requestUri = $requestUri;
+        $method = strtoupper($method);
+        if(in_array($method,[self::METHOD_GET,self::METHOD_POST])){
+            $this->setRequestMethod($method);
+        }
+    }
+
+    /**
+     * @return bool
+     */
+    public function isOnlyJsonResult(): bool
+    {
+        return $this->_onlyJsonResult;
+    }
+
+    /**
+     * @param bool $onlyJsonResult
+     */
+    public function setOnlyJsonResult(bool $onlyJsonResult)
+    {
+        $this->_onlyJsonResult = $onlyJsonResult;
     }
 
 
