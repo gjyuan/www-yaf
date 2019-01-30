@@ -2,8 +2,9 @@
 use vendor\web\controller\ApiBase;
 class Api_TestController extends ApiBase {
     public function indexAction(){
-        var_dump(\service\Neirong::app()->getUserInfoByMobile(),\service\User::app());exit;
-        $result = ['a'=>1,'b'=>2];
+        $detail = \service\Neirong::app()->getUserInfoByMobile();
+        $recommend = \service\Recommend::app()->getRecommend();
+        $result = ['detail'=>$detail,'recommend'=>$recommend];
         $msg = "ddddd";
         $this->success($result,$msg);
     }

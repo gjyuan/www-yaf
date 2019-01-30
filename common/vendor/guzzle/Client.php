@@ -1,8 +1,9 @@
 <?php
 namespace vendor\guzzle;
-use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Psr7\Response;
+use Psr\Http\Message\StreamInterface;
 use vendor\composer\Base;
+
 class Client extends Base {
     const METHOD_GET = "GET";
     const METHOD_POST = "POST";
@@ -19,6 +20,8 @@ class Client extends Base {
     protected $_requestUri;
     protected $_queryParams = [];
     protected $_postParams = [];
+    protected $_bodyParams;
+    protected $_jsonParams = [];
     protected $_headers = [];
     protected $_cookies = [];
     protected $_upload = [];
@@ -36,7 +39,7 @@ class Client extends Base {
         $this->setMsgKey($config['msgKey'] ?? "");
         $this->setSuccessCode($config['successCode'] ?? "");
         $this->setConnectTimeout($config['connectTimeout'] ?? 1);
-        $this->setConnectTimeout($config['requestTimeout'] ?? 1.5);
+        $this->setRequestTimeout($config['requestTimeout'] ?? 1.5);
     }
 
     /**
@@ -72,12 +75,14 @@ class Client extends Base {
             $option['query'] = $this->getQueryParams();
         }
         if(!empty($this->getPostParams())){
-
             $option['form_params'] = $this->getPostParams();
         }
-
-
-
+        if(!empty($this->getBodyParams())){
+            $option['body'] = $this->getBodyParams();
+        }
+        if(!empty($this->getJsonParams())){
+            $option['json'] = $this->getJsonParams();
+        }
         return $option;
     }
 
@@ -145,6 +150,43 @@ class Client extends Base {
     protected function setPostParams(array $postParams)
     {
         $this->_postParams = array_merge($this->_postParams,$postParams);
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getBodyParams()
+    {
+        return $this->_bodyParams;
+    }
+
+    /**
+     * @param $bodyParams
+     * @throws \Exception
+     */
+    public function setBodyParams($bodyParams)
+    {
+        if(is_string($bodyParams) || is_resource($bodyParams) || $bodyParams instanceof StreamInterface){
+            $this->_bodyParams = $bodyParams;
+        }else{
+            throw new \Exception("body param must be string|resource|Psr\Http\Message\StreamInterface");
+        }
+    }
+
+    /**
+     * @return array
+     */
+    public function getJsonParams(): array
+    {
+        return $this->_jsonParams;
+    }
+
+    /**
+     * @param array $jsonParams
+     */
+    public function setJsonParams(array $jsonParams)
+    {
+        $this->_jsonParams = $jsonParams;
     }
 
     /**
@@ -362,12 +404,12 @@ class Client extends Base {
      */
     public function getRequestUri()
     {
-        $getParams = $this->getQueryParams();
         return $this->_requestUri;
     }
 
     /**
      * @param mixed $requestUri
+     * @param string $method
      */
     public function setRequestUri($requestUri,$method="")
     {
