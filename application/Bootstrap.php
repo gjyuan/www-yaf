@@ -3,7 +3,7 @@ class Bootstrap extends Yaf\Bootstrap_Abstract{
 
     public function _initLoader(Yaf\Dispatcher $dispatcher){
         /* 注册本地类名前缀, 这部分类名将会在本地类库查找 */
-        Yaf\Loader::getInstance()->registerLocalNameSpace([]);
+//        Yaf\Loader::getInstance()->registerLocalNameSpace([]);
     }
 
     public function _initConfig() {

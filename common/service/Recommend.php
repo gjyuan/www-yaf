@@ -22,10 +22,10 @@ class Recommend extends Client {
                 'uuid'=>'98e20149-b48a-4b07-a05e-830f1e9f9f6f',
             );
             $this->setRequestUri('/recommend/100034',self::METHOD_POST);
-            $this->setJsonParams($params);
-            $response = $this->request();
-            if($response->isSuccess()){
-                return $response->getData();
+            $this->addJsonParams($params);
+            $result = $this->request();
+            if($result->isSuccess()){
+                return $result->getData();
             }else{
                 return [];
             }

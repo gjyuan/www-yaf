@@ -1,6 +1,7 @@
 {
     "require": {
         "guzzlehttp/guzzle": "~6.0",
-        "monolog/monolog": "^1.24"
+        "monolog/monolog": "^1.24",
+        "webgeeker/validation": "^0.3"
     }
 }

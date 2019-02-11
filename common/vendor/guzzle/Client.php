@@ -23,7 +23,6 @@ class Client extends Base {
     protected $_bodyParams;
     protected $_jsonParams = [];
     protected $_headers = [];
-    protected $_cookies = [];
     protected $_upload = [];
     protected $_connectTimeout = 1;//默认
     protected $_requestTimeout = 1.5;//请求超时时间默认1.5s
@@ -32,16 +31,16 @@ class Client extends Base {
     protected $_onlyJsonResult = false;
 
     protected function init(){
-        $config = $this->getServiceConfig($this->getService());
+        $config = $this->getServiceConfig();
         $this->setBaseUri($config['baseUri'] ?? "");
         $this->setCodeKey($config['codeKey'] ?? "");
         $this->setDataKey($config['dataKey'] ?? "");
         $this->setMsgKey($config['msgKey'] ?? "");
+        $this->setHost($config['host'] ?? "");
         $this->setSuccessCode($config['successCode'] ?? "");
         $this->setConnectTimeout($config['connectTimeout'] ?? 1);
         $this->setRequestTimeout($config['requestTimeout'] ?? 1.5);
     }
-
     /**
      * @return static
      */
@@ -53,6 +52,56 @@ class Client extends Base {
             self::$_instance[$class] = $instance;
         }
         return self::$_instance[$class];
+    }
+    public static function request($key, array $params=[],$method=self::METHOD_GET){
+        $client = self::app();
+        $config = $client->getServiceConfig();
+        $interfaceConf = $config[$key] ?? [];
+        $method = $interfaceConf['method'] ?? self::METHOD_GET;//默认GET
+        $uri = $interfaceConf['uri'] ?? "";
+        $requiredParams =  explode(',',($interfaceConf['uri'] ?? ""));
+        list($requireCheck,$msg) = $client->checkRequireParams($params,$requiredParams);
+        if(!$requireCheck){
+            throw new \Exception($msg);
+        }
+        $client->setRequestUri($uri,$method);
+        $client->beforeRequest();
+        $option = $client->getOption();
+        $response = $client->getClient()->request($client->getRequestMethod(),$client->getRequestUrl(),$option);
+        $client->afterRequest();
+        return $client->getResultObj($response);
+    }
+
+    protected function requestAsync(string $key, array $params=[], $method=self::METHOD_GET){
+        $client = self::app();
+        $client->beforeRequest();
+        $option = $this->getOption();
+        $promise = $client->getClient()->requestAsync($this->getRequestMethod(),$this->getRequestUrl(),$option);
+        $client->afterRequest();
+        return $promise;
+    }
+
+    protected function beforeRequest(){
+    }
+    protected function afterRequest(){
+        $this->_queryParams = [];
+        $this->_postParams = [];
+        $this->_headers = [];
+        $this->_jsonParams = [];
+        $this->_bodyParams = "";
+        $this->_upload = [];
+        $this->_requestMethod = self::METHOD_GET;
+    }
+
+    private function checkRequireParams(array $params,array $requiredParams = []){
+        $insertKeys = array_keys($params);
+        if (!empty($requiredParams)) {
+            $keys = array_diff($requiredParams, $insertKeys);
+            if(!empty($keys)){
+                return [false,$keys];
+            }
+        }
+        return [true,[]];
     }
 
     protected function getClient(){
@@ -86,22 +135,14 @@ class Client extends Base {
         return $option;
     }
 
-    /**
-     * @return Result
-     */
-    protected function request(){
-        $option = $this->getOption();
-        $response = $this->getClient()->request($this->getRequestMethod(),$this->getRequestUrl(),$option);
-        return $this->getResultObj($response);
-    }
-
     private function getResultObj(Response $response){
         $result = new Result($this->getCodeKey(),$this->getDataKey(),$this->getMsgKey(),$this->getSuccessCode());
         $result->setResponse($response);
         return $result;
     }
 
-    protected function getServiceConfig($configKey){
+    protected function getServiceConfig(){
+        $configKey = $this->getService();
         if(empty($configKey)) return [];
         return \Config::getByPath(CONFIG_PATH . DIRECTORY_SEPARATOR . "service", $configKey);
     }
@@ -131,7 +172,7 @@ class Client extends Base {
     /**
      * @param array $queryParams
      */
-    protected function setQueryParams(array $queryParams)
+    protected function addQueryParams(array $queryParams)
     {
         $this->_queryParams = array_merge($this->_queryParams,$queryParams);
     }
@@ -147,7 +188,7 @@ class Client extends Base {
     /**
      * @param array $postParams
      */
-    protected function setPostParams(array $postParams)
+    protected function addPostParams(array $postParams)
     {
         $this->_postParams = array_merge($this->_postParams,$postParams);
     }
@@ -184,9 +225,9 @@ class Client extends Base {
     /**
      * @param array $jsonParams
      */
-    public function setJsonParams(array $jsonParams)
+    public function addJsonParams(array $jsonParams)
     {
-        $this->_jsonParams = $jsonParams;
+        $this->_jsonParams = array_merge($this->_jsonParams, $jsonParams);
     }
 
     /**
@@ -200,27 +241,10 @@ class Client extends Base {
     /**
      * @param array $headers
      */
-    protected function setHeaders(array $headers)
+    protected function addHeaders(array $headers)
     {
-        $this->_headers = $headers;
+        $this->_headers = array_merge($this->_headers, $headers);
     }
-
-    /**
-     * @return array
-     */
-    protected function getCookies(): array
-    {
-        return $this->_cookies;
-    }
-
-    /**
-     * @param array $cookies
-     */
-    protected function setCookies(array $cookies)
-    {
-        $this->_cookies = $cookies;
-    }
-
     /**
      * @return array
      */

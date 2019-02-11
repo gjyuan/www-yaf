@@ -14,6 +14,10 @@ class ComposerStaticInit64c96273c248e4881d3d24b78a234e56
     );
 
     public static $prefixLengthsPsr4 = array (
+        'W' => 
+        array (
+            'WebGeeker\\Validation\\' => 21,
+        ),
         'P' => 
         array (
             'Psr\\Log\\' => 8,
@@ -32,6 +36,10 @@ class ComposerStaticInit64c96273c248e4881d3d24b78a234e56
     );
 
     public static $prefixDirsPsr4 = array (
+        'WebGeeker\\Validation\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/webgeeker/validation/src/Validation',
+        ),
         'Psr\\Log\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
